@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход - Warehouse Control</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body>
+    <!-- Главное приложение -->
+    <div id="appSection" class="">
+        <div class="container">
+            <div class="header">
+                <h1>🏭 Warehouse Control</h1>
+                <div class="user-info">
+                    <span>Пользователь: <strong id="currentUser"></strong></span>
+                    <span id="currentRole" class="role-badge"></span>
+                    <button id="logoutBtn" class="btn btn-logout">Выйти</button>
+                </div>
+            </div>
+
+            <div class="main-content">
+                <div class="tabs">
+                    <button class="tab active" data-tab="items">Товары</button>
+                    <button class="tab" data-tab="history">История изменений</button>
+                </div>
+
+                <!-- Вкладка товаров -->
+                <div id="itemsTab" class="tab-content active">
+                    <div id="itemAlert"></div>
+                    <div class="actions">
+                        <div class="search-box">
+                            <input type="text" id="searchItems" placeholder="Поиск товаров...">
+                        </div>
+                        <button id="addItemBtn" class="btn btn-success">+ Добавить товар</button>
+                    </div>
+                    <div id="itemsTable"></div>
+                </div>
+
+                <!-- Вкладка истории -->
+                <div id="historyTab" class="tab-content">
+                    <div class="filters">
+                        <select id="filterAction">
+                            <option value="">Все действия</option>
+                            <option value="INSERT">Создание</option>
+                            <option value="UPDATE">Обновление</option>
+                            <option value="DELETE">Удаление</option>
+                        </select>
+                        <input type="text" id="filterUsername" placeholder="Имя пользователя">
+                        <input type="date" id="filterDateFrom" placeholder="Дата от">
+                        <input type="date" id="filterDateTo" placeholder="Дата до">
+                        <button id="applyFiltersBtn" class="btn btn-primary btn-sm">Применить</button>
+                        <button id="resetFiltersBtn" class="btn btn-sm">Сбросить</button>
+                    </div>
+                    <div id="historyList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для добавления/редактирования товара -->
+    <div id="itemModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Добавить товар</h3>
+                <button class="close-btn" onclick="closeItemModal()">&times;</button>
+            </div>
+            <form id="itemForm">
+                <input type="hidden" id="itemId">
+                <div class="form-group">
+                    <label for="itemName">Название *</label>
+                    <input type="text" id="itemName" required>
+                </div>
+                <div class="form-group">
+                    <label for="itemDescription">Описание</label>
+                    <input type="text" id="itemDescription">
+                </div>
+                <div class="form-group">
+                    <label for="itemQuantity">Количество *</label>
+                    <input type="number" id="itemQuantity" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="itemPrice">Цена *</label>
+                    <input type="number" id="itemPrice" step="0.01" min="0" required>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Сохранить</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeItemModal()"
+                        style="flex: 1;">Отмена</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модальное окно истории товара -->
+    <div id="historyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>История изменений товара</h3>
+                <button class="close-btn" onclick="closeHistoryModal()">&times;</button>
+            </div>
+            <div id="itemHistoryContent"></div>
+        </div>
+    </div>
+    <script src="/static/js/application.js"></script>
+</body>
+
+</html>

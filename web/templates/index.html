@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warehouse Control - Управление складом</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+
+</head>
+
+<body>
+    <!-- Страница авторизации -->
+    <div id="loginPage" class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="logo">🏭</div>
+                <h2>Вход в систему</h2>
+                <p>Warehouse Control System</p>
+            </div>
+            <div id="loginAlert"></div>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="loginUsername">Имя пользователя</label>
+                    <input type="text" id="loginUsername" placeholder="Введите имя пользователя" required>
+                </div>
+                <div class="form-group password-toggle">
+                    <label for="loginPassword">Пароль</label>
+                    <input type="password" id="loginPassword" placeholder="Введите пароль" required>
+                    <button type="button" class="password-toggle-btn"
+                        onclick="togglePassword('loginPassword')">👁️</button>
+                </div>
+                <button type="submit" class="btn btn-primary">Войти</button>
+            </form>
+            <div class="auth-switch">
+                Нет аккаунта? <a onclick="showRegisterPage()">Зарегистрироваться</a>
+            </div>
+            <div class="role-description" style="margin-top: 20px;">
+                <strong>Тестовые учетные записи:</strong><br>
+                • admin / password123 (полный доступ)<br>
+                • manager / password123 (просмотр и редактирование)<br>
+                • viewer / password123 (только просмотр)
+            </div>
+        </div>
+    </div>
+
+    <!-- Страница регистрации -->
+    <div id="registerPage" class="auth-container hidden">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="logo">🏭</div>
+                <h2>Регистрация</h2>
+                <p>Создайте новый аккаунт</p>
+            </div>
+            <div id="registerAlert"></div>
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="registerUsername">Имя пользователя</label>
+                    <input type="text" id="registerUsername" placeholder="Введите имя пользователя" required
+                        minlength="3">
+                    <small>Минимум 3 символа</small>
+                </div>
+                <div class="form-group password-toggle">
+                    <label for="registerPassword">Пароль</label>
+                    <input type="password" id="registerPassword" placeholder="Введите пароль" required minlength="6">
+                    <button type="button" class="password-toggle-btn"
+                        onclick="togglePassword('registerPassword')">👁️</button>
+                    <small>Минимум 6 символов</small>
+                </div>
+                <div class="form-group password-toggle">
+                    <label for="registerPasswordConfirm">Подтвердите пароль</label>
+                    <input type="password" id="registerPasswordConfirm" placeholder="Повторите пароль" required>
+                    <button type="button" class="password-toggle-btn"
+                        onclick="togglePassword('registerPasswordConfirm')">👁️</button>
+                </div>
+                <div class="form-group">
+                    <label for="registerRole">Роль</label>
+                    <select id="registerRole" required>
+                        <option value="">Выберите роль</option>
+                        <option value="admin">Администратор (полный доступ)</option>
+                        <option value="manager">Менеджер (просмотр и редактирование)</option>
+                        <option value="viewer">Просмотр (только чтение)</option>
+                    </select>
+                </div>
+                <div class="role-description">
+                    <strong>Описание ролей:</strong><br>
+                    • <strong>Администратор:</strong> полный доступ ко всем операциям<br>
+                    • <strong>Менеджер:</strong> может просматривать и редактировать товары<br>
+                    • <strong>Просмотр:</strong> может только просматривать товары и историю
+                </div>
+                <button type="submit" class="btn btn-primary">Зарегистрироваться</button>
+            </form>
+            <div class="auth-switch">
+                Уже есть аккаунт? <a href="javascript:void(0)" onclick="showLoginPage()">Войти</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Главное приложение -->
+    <div id="appSection" class="hidden">
+        <div class="container">
+            <div class="header">
+                <h1>🏭 Warehouse Control</h1>
+                <div class="user-info">
+                    <span>Пользователь: <strong id="currentUser"></strong></span>
+                    <span id="currentRole" class="role-badge"></span>
+                    <button id="logoutBtn" class="btn btn-logout">Выйти</button>
+                </div>
+            </div>
+
+            <div class="main-content">
+                <div class="tabs">
+                    <button class="tab active" data-tab="items">Товары</button>
+                    <button class="tab" data-tab="history">История изменений</button>
+                </div>
+
+                <!-- Вкладка товаров -->
+                <div id="itemsTab" class="tab-content active">
+                    <div id="itemAlert"></div>
+                    <div class="actions">
+                        <div class="search-box">
+                            <input type="text" id="searchItems" placeholder="Поиск товаров...">
+                        </div>
+                        <button id="addItemBtn" class="btn btn-success">+ Добавить товар</button>
+                    </div>
+                    <div id="itemsTable"></div>
+                </div>
+
+                <!-- Вкладка истории -->
+                <div id="historyTab" class="tab-content">
+                    <div class="filters">
+                        <select id="filterAction">
+                            <option value="">Все действия</option>
+                            <option value="INSERT">Создание</option>
+                            <option value="UPDATE">Обновление</option>
+                            <option value="DELETE">Удаление</option>
+                        </select>
+                        <input type="text" id="filterUsername" placeholder="Имя пользователя">
+                        <input type="date" id="filterDateFrom" placeholder="Дата от">
+                        <input type="date" id="filterDateTo" placeholder="Дата до">
+                        <button id="applyFiltersBtn" class="btn btn-primary btn-sm">Применить</button>
+                        <button id="resetFiltersBtn" class="btn btn-sm">Сбросить</button>
+                    </div>
+                    <div id="historyList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для добавления/редактирования товара -->
+    <div id="itemModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Добавить товар</h3>
+                <button class="close-btn" onclick="closeItemModal()">&times;</button>
+            </div>
+            <form id="itemForm">
+                <input type="hidden" id="itemId">
+                <div class="form-group">
+                    <label for="itemName">Название *</label>
+                    <input type="text" id="itemName" required>
+                </div>
+                <div class="form-group">
+                    <label for="itemDescription">Описание</label>
+                    <input type="text" id="itemDescription">
+                </div>
+                <div class="form-group">
+                    <label for="itemQuantity">Количество *</label>
+                    <input type="number" id="itemQuantity" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="itemPrice">Цена *</label>
+                    <input type="number" id="itemPrice" step="0.01" min="0" required>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Сохранить</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeItemModal()"
+                        style="flex: 1;">Отмена</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модальное окно истории товара -->
+    <div id="historyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>История изменений товара</h3>
+                <button class="close-btn" onclick="closeHistoryModal()">&times;</button>
+            </div>
+            <div id="itemHistoryContent"></div>
+        </div>
+    </div>
+
+    <script>
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            const btn = input.parentElement.querySelector('.password-toggle-btn');
+            if (input.type === 'password') {
+                input.type = 'text';
+                btn.textContent = '🙈';
+            } else {
+                input.type = 'password';
+                btn.textContent = '👁️';
+            }
+        }
+
+        function showLoginPage() {
+            document.getElementById('loginPage').classList.remove('hidden');
+            document.getElementById('registerPage').classList.add('hidden');
+            document.getElementById('appSection').classList.add('hidden');
+        }
+
+        function showRegisterPage() {
+            document.getElementById('loginPage').classList.add('hidden');
+            document.getElementById('registerPage').classList.remove('hidden');
+            document.getElementById('appSection').classList.add('hidden');
+        }
+    </script>
+    <script src="/static/js/app.js"></script>
+</body>
+
+</html>
