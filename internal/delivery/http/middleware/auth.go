@@ -16,21 +16,28 @@ const (
 
 func AuthMiddleware(jwtManager *jwt.Manager) ginext.HandlerFunc {
 	return func(c *ginext.Context) {
+		var tokenString string
+
 		authHeader := c.GetHeader(authorizationHeader)
-		if authHeader == "" {
+		if authHeader != "" {
+			parts := strings.Split(authHeader, " ")
+			if len(parts) == 2 && parts[0] == "Bearer" {
+				tokenString = parts[1]
+			}
+		}
+
+		if tokenString == "" {
+			token, err := c.Cookie("token")
+			if err == nil && token != "" {
+				tokenString = token
+			}
+		}
+
+		if tokenString == "" {
 			response.Error(c, 401, entity.ErrUnauthorized.Error())
 			c.Abort()
 			return
 		}
-
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			response.Error(c, 401, "invalid authorization header format")
-			c.Abort()
-			return
-		}
-
-		tokenString := parts[1]
 
 		claims, err := jwtManager.Verify(tokenString)
 		if err != nil {

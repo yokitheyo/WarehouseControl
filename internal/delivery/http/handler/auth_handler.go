@@ -26,26 +26,6 @@ type loginResponse struct {
 	Token string `json:"token"`
 }
 
-// func (h *AuthHandler) Login(c *ginext.Context) {
-// 	var req loginRequest
-// 	if err := c.ShouldBindJSON(&req); err != nil {
-// 		response.Error(c, 400, "invalid request body")
-// 		return
-// 	}
-
-// 	token, err := h.authUseCase.Login(c.Request.Context(), req.Username, req.Password)
-// 	if err != nil {
-// 		if err == entity.ErrInvalidCredentials {
-// 			response.Error(c, 401, err.Error())
-// 			return
-// 		}
-// 		response.Error(c, 500, "internal server error")
-// 		return
-// 	}
-
-//		response.Success(c, 200, loginResponse{Token: token})
-//	}
-
 func (h *AuthHandler) Login(c *ginext.Context) {
 	var req loginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -63,8 +43,9 @@ func (h *AuthHandler) Login(c *ginext.Context) {
 		return
 	}
 
-	c.SetCookie("token", token, 3600, "/", "", false, true) // HttpOnly
-	response.Success(c, 200, ginext.H{"message": "login successful"})
+	c.SetCookie("token", token, 86400, "/", "", false, true)
+
+	response.Success(c, 200, loginResponse{Token: token})
 }
 
 type registerRequest struct {
