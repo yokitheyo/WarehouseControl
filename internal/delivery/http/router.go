@@ -1,11 +1,9 @@
 package http
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/wb-go/wbf/ginext"
 	"github.com/yokitheyo/WarehouseControl/internal/delivery/http/handler"
 	"github.com/yokitheyo/WarehouseControl/internal/delivery/http/middleware"
-	"github.com/yokitheyo/WarehouseControl/internal/domain/entity"
 	"github.com/yokitheyo/WarehouseControl/internal/pkg/jwt"
 )
 
@@ -16,12 +14,6 @@ func SetupRouter(
 	historyHandler *handler.HistoryHandler,
 	jwtManager *jwt.Manager,
 ) {
-	auth := engine.Group("/api/auth")
-	{
-		auth.POST("/login", authHandler.Login)
-		auth.POST("/register", authHandler.Register)
-	}
-
 	engine.Static("/static", "./web/static")
 	engine.LoadHTMLGlob("web/templates/*")
 
@@ -32,6 +24,16 @@ func SetupRouter(
 	engine.GET("/register", func(c *ginext.Context) {
 		c.HTML(200, "register.html", nil)
 	})
+
+	engine.GET("/", func(c *ginext.Context) {
+		c.HTML(200, "app.html", nil)
+	})
+
+	auth := engine.Group("/api/auth")
+	{
+		auth.POST("/login", authHandler.Login)
+		auth.POST("/register", authHandler.Register)
+	}
 
 	api := engine.Group("/api")
 	api.Use(middleware.AuthMiddleware(jwtManager))
@@ -51,20 +53,4 @@ func SetupRouter(
 			history.GET("/items/:id", historyHandler.GetByItemID)
 		}
 	}
-
-	engine.GET("/", middleware.AuthPageMiddleware(jwtManager), func(c *ginext.Context) {
-		user, _ := c.Get("user")
-		u := user.(*entity.User)
-
-		c.HTML(200, "app.html", gin.H{
-			"username": u.Username,
-			"role":     u.Role,
-		})
-	})
-
-	engine.GET("/logout", func(c *ginext.Context) {
-		c.SetCookie("token", "", -1, "/", "", false, true)
-		c.Redirect(302, "/login")
-	})
-
 }

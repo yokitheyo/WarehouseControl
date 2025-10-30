@@ -59,3 +59,12 @@ func (uc *AuthUseCase) Register(ctx context.Context, username, password string, 
 
 	return nil
 }
+
+func (uc *AuthUseCase) GetUserInfo(ctx context.Context, username string) (*entity.User, error) {
+	user, err := uc.userRepo.GetByUsername(ctx, username)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}

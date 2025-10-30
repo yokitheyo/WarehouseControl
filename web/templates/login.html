@@ -17,7 +17,7 @@
                 <h2>Вход в систему</h2>
                 <p>Warehouse Control System</p>
             </div>
-            <div id="loginAlert"></div>
+            <div id="loginAlert" style="display: none;"></div>
             <form id="loginForm">
                 <div class="form-group">
                     <label for="loginUsername">Имя пользователя</label>
@@ -42,19 +42,6 @@
             </div>
         </div>
     </div>
-    <script>
-        function togglePassword(inputId) {
-            const input = document.getElementById(inputId);
-            const btn = input.parentElement.querySelector('.password-toggle-btn');
-            if (input.type === 'password') {
-                input.type = 'text';
-                btn.textContent = '🙈';
-            } else {
-                input.type = 'password';
-                btn.textContent = '👁️';
-            }
-        }
-    </script>
     <script src="/static/js/login.js"></script>
 </body>
 

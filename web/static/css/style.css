@@ -457,7 +457,7 @@ tr:hover {
 }
 
 .hidden {
-    display: none;
+    display: none !important;
 }
 
 .filters {

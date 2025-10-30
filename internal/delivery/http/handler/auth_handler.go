@@ -23,7 +23,9 @@ type loginRequest struct {
 }
 
 type loginResponse struct {
-	Token string `json:"token"`
+	Token    string      `json:"token"`
+	Username string      `json:"username"`
+	Role     entity.Role `json:"role"`
 }
 
 func (h *AuthHandler) Login(c *ginext.Context) {
@@ -43,9 +45,17 @@ func (h *AuthHandler) Login(c *ginext.Context) {
 		return
 	}
 
-	c.SetCookie("token", token, 86400, "/", "", false, true)
+	user, err := h.authUseCase.GetUserInfo(c.Request.Context(), req.Username)
+	if err != nil {
+		response.Error(c, 500, "internal server error")
+		return
+	}
 
-	response.Success(c, 200, loginResponse{Token: token})
+	response.Success(c, 200, loginResponse{
+		Token:    token,
+		Username: user.Username,
+		Role:     user.Role,
+	})
 }
 
 type registerRequest struct {
