@@ -65,7 +65,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="modalTitle">Добавить товар</h3>
-                <button class="close-btn" onclick="closeItemModal()">&times;</button>
+                <button class="close-btn" onclick="window.app.closeItemModal()">&times;</button>
             </div>
             <form id="itemForm">
                 <input type="hidden" id="itemId">
@@ -87,7 +87,7 @@
                 </div>
                 <div style="display: flex; gap: 10px;">
                     <button type="submit" class="btn btn-primary" style="flex: 1;">Сохранить</button>
-                    <button type="button" class="btn btn-secondary" onclick="closeItemModal()"
+                    <button type="button" class="btn btn-secondary" onclick="window.app.closeItemModal()"
                         style="flex: 1;">Отмена</button>
                 </div>
             </form>
@@ -99,7 +99,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3>История изменений товара</h3>
-                <button class="close-btn" onclick="closeHistoryModal()">&times;</button>
+                <button class="close-btn" onclick="window.app.closeHistoryModal()">&times;</button>
             </div>
             <div id="itemHistoryContent"></div>
         </div>

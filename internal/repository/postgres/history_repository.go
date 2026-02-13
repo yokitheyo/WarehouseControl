@@ -2,11 +2,13 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/wb-go/wbf/dbpg"
+	"github.com/wb-go/wbf/zlog"
 	"github.com/yokitheyo/WarehouseControl/internal/domain/entity"
 )
 
@@ -26,13 +28,23 @@ func (r *historyRepository) GetByItemID(ctx context.Context, itemID int) ([]*ent
 		ORDER BY changed_at DESC
 	`
 
+	zlog.Logger.Info().Int("item_id", itemID).Msg("Getting history for item")
+
 	rows, err := r.db.QueryContext(ctx, query, itemID)
 	if err != nil {
+		zlog.Logger.Error().Err(err).Int("item_id", itemID).Msg("Failed to query history")
 		return nil, fmt.Errorf("failed to get history: %w", err)
 	}
 	defer rows.Close()
 
-	return r.scanHistory(rows)
+	history, err := r.scanHistory(rows)
+	if err != nil {
+		zlog.Logger.Error().Err(err).Int("item_id", itemID).Msg("Failed to scan history")
+		return nil, err
+	}
+
+	zlog.Logger.Info().Int("item_id", itemID).Int("count", len(history)).Msg("History loaded successfully")
+	return history, nil
 }
 
 func (r *historyRepository) GetAll(ctx context.Context, filter *entity.HistoryFilter) ([]*entity.ItemHistory, error) {
@@ -83,13 +95,23 @@ func (r *historyRepository) GetAll(ctx context.Context, filter *entity.HistoryFi
 		args = append(args, filter.Offset)
 	}
 
+	zlog.Logger.Info().Interface("filter", filter).Msg("Getting all history")
+
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
+		zlog.Logger.Error().Err(err).Msg("Failed to query all history")
 		return nil, fmt.Errorf("failed to get history: %w", err)
 	}
 	defer rows.Close()
 
-	return r.scanHistory(rows)
+	history, err := r.scanHistory(rows)
+	if err != nil {
+		zlog.Logger.Error().Err(err).Msg("Failed to scan all history")
+		return nil, err
+	}
+
+	zlog.Logger.Info().Int("count", len(history)).Msg("All history loaded successfully")
+	return history, nil
 }
 
 func (r *historyRepository) scanHistory(rows interface {
@@ -101,26 +123,29 @@ func (r *historyRepository) scanHistory(rows interface {
 
 	for rows.Next() {
 		h := &entity.ItemHistory{}
-		var oldDataJSON, newDataJSON []byte
+		var oldDataJSON, newDataJSON sql.NullString
 
 		err := rows.Scan(
 			&h.ID, &h.ItemID, &h.Action, &h.Username,
 			&oldDataJSON, &newDataJSON, &h.ChangedAt,
 		)
 		if err != nil {
+			zlog.Logger.Error().Err(err).Msg("Failed to scan history row")
 			return nil, fmt.Errorf("failed to scan history: %w", err)
 		}
 
-		if len(oldDataJSON) > 0 && !isNull(oldDataJSON) {
+		if oldDataJSON.Valid && len(oldDataJSON.String) > 0 && !isNull([]byte(oldDataJSON.String)) {
 			h.OldData = &entity.Item{}
-			if err := json.Unmarshal(oldDataJSON, h.OldData); err != nil {
+			if err := json.Unmarshal([]byte(oldDataJSON.String), h.OldData); err != nil {
+				zlog.Logger.Error().Err(err).Str("old_data", oldDataJSON.String).Msg("Failed to unmarshal old_data")
 				return nil, fmt.Errorf("failed to unmarshal old_data: %w", err)
 			}
 		}
 
-		if len(newDataJSON) > 0 && !isNull(newDataJSON) {
+		if newDataJSON.Valid && len(newDataJSON.String) > 0 && !isNull([]byte(newDataJSON.String)) {
 			h.NewData = &entity.Item{}
-			if err := json.Unmarshal(newDataJSON, h.NewData); err != nil {
+			if err := json.Unmarshal([]byte(newDataJSON.String), h.NewData); err != nil {
+				zlog.Logger.Error().Err(err).Str("new_data", newDataJSON.String).Msg("Failed to unmarshal new_data")
 				return nil, fmt.Errorf("failed to unmarshal new_data: %w", err)
 			}
 		}
@@ -129,6 +154,7 @@ func (r *historyRepository) scanHistory(rows interface {
 	}
 
 	if err := rows.Err(); err != nil {
+		zlog.Logger.Error().Err(err).Msg("Rows iteration error")
 		return nil, fmt.Errorf("rows iteration error: %w", err)
 	}
 
@@ -136,5 +162,9 @@ func (r *historyRepository) scanHistory(rows interface {
 }
 
 func isNull(data []byte) bool {
-	return len(data) == 0 || strings.TrimSpace(string(data)) == "null"
+	if len(data) == 0 {
+		return true
+	}
+	trimmed := strings.TrimSpace(string(data))
+	return trimmed == "" || trimmed == "null" || trimmed == "NULL"
 }
