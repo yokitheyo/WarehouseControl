@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"net/http"
 	"strconv"
 	"time"
 
@@ -24,27 +25,31 @@ func (h *HistoryHandler) GetByItemID(c *ginext.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		response.Error(c, 400, "invalid item id")
+		response.Error(c, http.StatusBadRequest, "invalid item id")
 		return
 	}
 
 	history, err := h.historyUseCase.GetByItemID(c.Request.Context(), id)
 	if err != nil {
-		response.Error(c, 500, "failed to get history")
+		response.Error(c, http.StatusInternalServerError, "failed to get history")
 		return
 	}
 
-	response.Success(c, 200, history)
+	response.Success(c, http.StatusOK, history)
 }
 
 func (h *HistoryHandler) GetAll(c *ginext.Context) {
-	filter := &entity.HistoryFilter{}
+	filter := &entity.HistoryFilter{
+		Limit: 100,
+	}
 
 	if itemIDStr := c.Query("item_id"); itemIDStr != "" {
 		itemID, err := strconv.Atoi(itemIDStr)
-		if err == nil {
-			filter.ItemID = &itemID
+		if err != nil {
+			response.Error(c, http.StatusBadRequest, "invalid item_id")
+			return
 		}
+		filter.ItemID = &itemID
 	}
 
 	if username := c.Query("username"); username != "" {
@@ -58,39 +63,45 @@ func (h *HistoryHandler) GetAll(c *ginext.Context) {
 
 	if dateFromStr := c.Query("date_from"); dateFromStr != "" {
 		dateFrom, err := time.Parse(time.RFC3339, dateFromStr)
-		if err == nil {
-			filter.DateFrom = &dateFrom
+		if err != nil {
+			response.Error(c, http.StatusBadRequest, "invalid date_from, expected RFC3339")
+			return
 		}
+		filter.DateFrom = &dateFrom
 	}
 
 	if dateToStr := c.Query("date_to"); dateToStr != "" {
 		dateTo, err := time.Parse(time.RFC3339, dateToStr)
-		if err == nil {
-			filter.DateTo = &dateTo
+		if err != nil {
+			response.Error(c, http.StatusBadRequest, "invalid date_to, expected RFC3339")
+			return
 		}
+		filter.DateTo = &dateTo
 	}
 
 	if limitStr := c.Query("limit"); limitStr != "" {
 		limit, err := strconv.Atoi(limitStr)
-		if err == nil && limit > 0 {
-			filter.Limit = limit
+		if err != nil || limit <= 0 {
+			response.Error(c, http.StatusBadRequest, "invalid limit")
+			return
 		}
-	} else {
-		filter.Limit = 100
+		filter.Limit = limit
 	}
 
 	if offsetStr := c.Query("offset"); offsetStr != "" {
 		offset, err := strconv.Atoi(offsetStr)
-		if err == nil && offset >= 0 {
-			filter.Offset = offset
+		if err != nil || offset < 0 {
+			response.Error(c, http.StatusBadRequest, "invalid offset")
+			return
 		}
+		filter.Offset = offset
 	}
 
 	history, err := h.historyUseCase.GetAll(c.Request.Context(), filter)
 	if err != nil {
-		response.Error(c, 500, "failed to get history")
+		response.Error(c, http.StatusInternalServerError, "failed to get history")
 		return
 	}
 
-	response.Success(c, 200, history)
+	response.Success(c, http.StatusOK, history)
 }

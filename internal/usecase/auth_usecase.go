@@ -26,11 +26,11 @@ func NewAuthUseCase(userRepo repository.UserRepository, jwtManager *jwt.Manager)
 func (uc *AuthUseCase) Login(ctx context.Context, username, password string) (string, error) {
 	user, err := uc.userRepo.GetByUsername(ctx, username)
 	if err != nil {
-		return "", entity.ErrInvalidCredentials
+		return "", fmt.Errorf("get user by username: %w", entity.ErrInvalidCredentials)
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		return "", entity.ErrInvalidCredentials
+		return "", fmt.Errorf("compare password hash: %w", entity.ErrInvalidCredentials)
 	}
 
 	token, err := uc.jwtManager.Generate(user.Username, user.Role)

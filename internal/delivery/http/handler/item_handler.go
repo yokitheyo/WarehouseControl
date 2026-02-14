@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"errors"
+	"net/http"
 	"strconv"
 
 	"github.com/wb-go/wbf/ginext"
@@ -69,21 +71,21 @@ func (h *ItemHandler) GetByID(c *ginext.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		response.Error(c, 400, "invalid item id")
+		response.Error(c, http.StatusBadRequest, "invalid item id")
 		return
 	}
 
 	item, err := h.itemUseCase.GetByID(c.Request.Context(), id)
 	if err != nil {
-		if err == entity.ErrItemNotFound {
-			response.Error(c, 404, err.Error())
+		if errors.Is(err, entity.ErrItemNotFound) {
+			response.Error(c, http.StatusNotFound, err.Error())
 			return
 		}
-		response.Error(c, 500, "failed to get item")
+		response.Error(c, http.StatusInternalServerError, "failed to get item")
 		return
 	}
 
-	response.Success(c, 200, item)
+	response.Success(c, http.StatusOK, item)
 }
 
 type updateItemRequest struct {
@@ -97,19 +99,19 @@ func (h *ItemHandler) Update(c *ginext.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		response.Error(c, 400, "invalid item id")
+		response.Error(c, http.StatusBadRequest, "invalid item id")
 		return
 	}
 
 	var req updateItemRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, 400, "invalid request body")
+		response.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	user, err := middleware.GetUserFromContext(c)
 	if err != nil {
-		response.Error(c, 401, entity.ErrUnauthorized.Error())
+		response.Error(c, http.StatusUnauthorized, entity.ErrUnauthorized.Error())
 		return
 	}
 
@@ -122,39 +124,39 @@ func (h *ItemHandler) Update(c *ginext.Context) {
 	}
 
 	if err := h.itemUseCase.Update(c.Request.Context(), item, user.Username); err != nil {
-		if err == entity.ErrItemNotFound {
-			response.Error(c, 404, err.Error())
+		if errors.Is(err, entity.ErrItemNotFound) {
+			response.Error(c, http.StatusNotFound, err.Error())
 			return
 		}
-		response.Error(c, 500, "failed to update item")
+		response.Error(c, http.StatusInternalServerError, "failed to update item")
 		return
 	}
 
-	response.Success(c, 200, item)
+	response.Success(c, http.StatusOK, item)
 }
 
 func (h *ItemHandler) Delete(c *ginext.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		response.Error(c, 400, "invalid item id")
+		response.Error(c, http.StatusBadRequest, "invalid item id")
 		return
 	}
 
 	user, err := middleware.GetUserFromContext(c)
 	if err != nil {
-		response.Error(c, 401, entity.ErrUnauthorized.Error())
+		response.Error(c, http.StatusUnauthorized, entity.ErrUnauthorized.Error())
 		return
 	}
 
 	if err := h.itemUseCase.Delete(c.Request.Context(), id, user.Username); err != nil {
-		if err == entity.ErrItemNotFound {
-			response.Error(c, 404, err.Error())
+		if errors.Is(err, entity.ErrItemNotFound) {
+			response.Error(c, http.StatusNotFound, err.Error())
 			return
 		}
-		response.Error(c, 500, "failed to delete item")
+		response.Error(c, http.StatusInternalServerError, "failed to delete item")
 		return
 	}
 
-	response.Success(c, 200, ginext.H{"message": "item deleted successfully"})
+	response.Success(c, http.StatusOK, ginext.H{"message": "item deleted successfully"})
 }

@@ -1,6 +1,9 @@
 package handler
 
 import (
+	"errors"
+	"net/http"
+
 	"github.com/wb-go/wbf/ginext"
 	"github.com/yokitheyo/WarehouseControl/internal/domain/entity"
 	"github.com/yokitheyo/WarehouseControl/internal/pkg/response"
@@ -31,27 +34,27 @@ type loginResponse struct {
 func (h *AuthHandler) Login(c *ginext.Context) {
 	var req loginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, 400, "invalid request body")
+		response.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	token, err := h.authUseCase.Login(c.Request.Context(), req.Username, req.Password)
 	if err != nil {
-		if err == entity.ErrInvalidCredentials {
-			response.Error(c, 401, err.Error())
+		if errors.Is(err, entity.ErrInvalidCredentials) {
+			response.Error(c, http.StatusUnauthorized, err.Error())
 			return
 		}
-		response.Error(c, 500, "internal server error")
+		response.Error(c, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
 	user, err := h.authUseCase.GetUserInfo(c.Request.Context(), req.Username)
 	if err != nil {
-		response.Error(c, 500, "internal server error")
+		response.Error(c, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
-	response.Success(c, 200, loginResponse{
+	response.Success(c, http.StatusOK, loginResponse{
 		Token:    token,
 		Username: user.Username,
 		Role:     user.Role,
@@ -67,20 +70,22 @@ type registerRequest struct {
 func (h *AuthHandler) Register(c *ginext.Context) {
 	var req registerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, 400, "invalid request body")
+		response.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Role != entity.RoleAdmin && req.Role != entity.RoleManager && req.Role != entity.RoleViewer {
-		response.Error(c, 400, "invalid role")
+		response.Error(c, http.StatusBadRequest, "invalid role")
 		return
 	}
 
 	err := h.authUseCase.Register(c.Request.Context(), req.Username, req.Password, req.Role)
 	if err != nil {
-		response.Error(c, 500, "failed to register user")
+		response.Error(c, http.StatusInternalServerError, "failed to register user")
 		return
 	}
 
-	response.Success(c, 201, ginext.H{"message": "user registered successfully"})
+	response.Success(c, http.StatusCreated, ginext.H{
+		"message": "user registered successfully",
+	})
 }
