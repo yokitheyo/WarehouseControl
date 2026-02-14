@@ -9,16 +9,11 @@ import (
 	"github.com/yokitheyo/WarehouseControl/internal/pkg/response"
 )
 
-const (
-	authorizationHeader = "Authorization"
-	userContextKey      = "user"
-)
-
 func AuthMiddleware(jwtManager *jwt.Manager) ginext.HandlerFunc {
 	return func(c *ginext.Context) {
 		var tokenString string
 
-		authHeader := c.GetHeader(authorizationHeader)
+		authHeader := c.GetHeader(entity.AuthorizationHeader)
 		if authHeader != "" {
 			parts := strings.Split(authHeader, " ")
 			if len(parts) == 2 && parts[0] == "Bearer" {
@@ -50,14 +45,14 @@ func AuthMiddleware(jwtManager *jwt.Manager) ginext.HandlerFunc {
 			Username: claims.Username,
 			Role:     claims.Role,
 		}
-		c.Set(userContextKey, user)
+		c.Set(entity.UserContextKey, user)
 
 		c.Next()
 	}
 }
 
 func GetUserFromContext(c *ginext.Context) (*entity.User, error) {
-	value, exists := c.Get(userContextKey)
+	value, exists := c.Get(entity.UserContextKey)
 	if !exists {
 		return nil, entity.ErrUnauthorized
 	}

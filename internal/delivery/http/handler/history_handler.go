@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -31,6 +32,10 @@ func (h *HistoryHandler) GetByItemID(c *ginext.Context) {
 
 	history, err := h.historyUseCase.GetByItemID(c.Request.Context(), id)
 	if err != nil {
+		if errors.Is(err, entity.ErrItemNotFound) {
+			response.Error(c, http.StatusNotFound, "item not found")
+			return
+		}
 		response.Error(c, http.StatusInternalServerError, "failed to get history")
 		return
 	}
@@ -97,6 +102,11 @@ func (h *HistoryHandler) GetAll(c *ginext.Context) {
 		filter.Offset = offset
 	}
 
+	if err := validateHistoryFilter(filter); err != nil {
+		response.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	history, err := h.historyUseCase.GetAll(c.Request.Context(), filter)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "failed to get history")
@@ -104,4 +114,13 @@ func (h *HistoryHandler) GetAll(c *ginext.Context) {
 	}
 
 	response.Success(c, http.StatusOK, history)
+}
+
+func validateHistoryFilter(filter *entity.HistoryFilter) error {
+	if filter.DateFrom != nil && filter.DateTo != nil {
+		if filter.DateFrom.After(*filter.DateTo) {
+			return errors.New("date_from must be before date_to")
+		}
+	}
+	return nil
 }

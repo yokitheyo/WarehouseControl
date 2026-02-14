@@ -55,8 +55,8 @@ func main() {
 
 	// Initialize use cases
 	authUseCase := usecase.NewAuthUseCase(userRepo, jwtManager)
-	itemUseCase := usecase.NewItemUseCase(itemRepo)
 	historyUseCase := usecase.NewHistoryUseCase(historyRepo)
+	itemUseCase := usecase.NewItemUseCase(itemRepo, historyUseCase)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authUseCase)

@@ -10,13 +10,14 @@ import (
 	"github.com/wb-go/wbf/dbpg"
 	"github.com/wb-go/wbf/zlog"
 	"github.com/yokitheyo/WarehouseControl/internal/domain/entity"
+	"github.com/yokitheyo/WarehouseControl/internal/domain/repository"
 )
 
 type historyRepository struct {
 	db *dbpg.DB
 }
 
-func NewHistoryRepository(db *dbpg.DB) *historyRepository {
+func NewHistoryRepository(db *dbpg.DB) repository.HistoryRepository {
 	return &historyRepository{db: db}
 }
 
@@ -35,7 +36,11 @@ func (r *historyRepository) GetByItemID(ctx context.Context, itemID int) ([]*ent
 		zlog.Logger.Error().Err(err).Int("item_id", itemID).Msg("Failed to query history")
 		return nil, fmt.Errorf("failed to get history: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			zlog.Logger.Error().Err(err).Msg("Failed to close rows")
+		}
+	}()
 
 	history, err := r.scanHistory(rows)
 	if err != nil {
@@ -49,7 +54,7 @@ func (r *historyRepository) GetByItemID(ctx context.Context, itemID int) ([]*ent
 
 func (r *historyRepository) GetAll(ctx context.Context, filter *entity.HistoryFilter) ([]*entity.ItemHistory, error) {
 	query := `SELECT id, item_id, action, username, old_data, new_data, changed_at FROM items_history WHERE 1=1`
-	args := []interface{}{}
+	var args []interface{}
 	argPos := 1
 
 	if filter.ItemID != nil {
@@ -102,7 +107,12 @@ func (r *historyRepository) GetAll(ctx context.Context, filter *entity.HistoryFi
 		zlog.Logger.Error().Err(err).Msg("Failed to query all history")
 		return nil, fmt.Errorf("failed to get history: %w", err)
 	}
-	defer rows.Close()
+
+	defer func() {
+		if err := rows.Close(); err != nil {
+			zlog.Logger.Error().Err(err).Msg("Failed to close rows")
+		}
+	}()
 
 	history, err := r.scanHistory(rows)
 	if err != nil {
@@ -114,11 +124,43 @@ func (r *historyRepository) GetAll(ctx context.Context, filter *entity.HistoryFi
 	return history, nil
 }
 
-func (r *historyRepository) scanHistory(rows interface {
-	Next() bool
-	Scan(dest ...interface{}) error
-	Err() error
-}) ([]*entity.ItemHistory, error) {
+func (r *historyRepository) Create(ctx context.Context, history *entity.ItemHistory) error {
+	query := `
+		INSERT INTO items_history (item_id, action, username, old_data, new_data, changed_at)
+		VALUES ($1, $2, $3, $4, $5, NOW())
+		RETURNING id, changed_at
+	`
+
+	var oldJSON, newJSON []byte
+	var err error
+
+	if history.OldData != nil {
+		oldJSON, err = json.Marshal(history.OldData)
+		if err != nil {
+			return fmt.Errorf("failed to marshal old_data: %w", err)
+		}
+	}
+	if history.NewData != nil {
+		newJSON, err = json.Marshal(history.NewData)
+		if err != nil {
+			return fmt.Errorf("failed to marshal new_data: %w", err)
+		}
+	}
+
+	err = r.db.QueryRowContext(
+		ctx, query,
+		history.ItemID, history.Action, history.Username,
+		oldJSON, newJSON,
+	).Scan(&history.ID, &history.ChangedAt)
+
+	if err != nil {
+		return fmt.Errorf("failed to insert history: %w", err)
+	}
+
+	return nil
+}
+
+func (r *historyRepository) scanHistory(rows *sql.Rows) ([]*entity.ItemHistory, error) {
 	var history []*entity.ItemHistory
 
 	for rows.Next() {
@@ -134,20 +176,11 @@ func (r *historyRepository) scanHistory(rows interface {
 			return nil, fmt.Errorf("failed to scan history: %w", err)
 		}
 
-		if oldDataJSON.Valid && len(oldDataJSON.String) > 0 && !isNull([]byte(oldDataJSON.String)) {
-			h.OldData = &entity.Item{}
-			if err := json.Unmarshal([]byte(oldDataJSON.String), h.OldData); err != nil {
-				zlog.Logger.Error().Err(err).Str("old_data", oldDataJSON.String).Msg("Failed to unmarshal old_data")
-				return nil, fmt.Errorf("failed to unmarshal old_data: %w", err)
-			}
+		if h.OldData, err = unmarshalItem(oldDataJSON); err != nil {
+			return nil, err
 		}
-
-		if newDataJSON.Valid && len(newDataJSON.String) > 0 && !isNull([]byte(newDataJSON.String)) {
-			h.NewData = &entity.Item{}
-			if err := json.Unmarshal([]byte(newDataJSON.String), h.NewData); err != nil {
-				zlog.Logger.Error().Err(err).Str("new_data", newDataJSON.String).Msg("Failed to unmarshal new_data")
-				return nil, fmt.Errorf("failed to unmarshal new_data: %w", err)
-			}
+		if h.NewData, err = unmarshalItem(newDataJSON); err != nil {
+			return nil, err
 		}
 
 		history = append(history, h)
@@ -161,10 +194,14 @@ func (r *historyRepository) scanHistory(rows interface {
 	return history, nil
 }
 
-func isNull(data []byte) bool {
-	if len(data) == 0 {
-		return true
+func unmarshalItem(data sql.NullString) (*entity.Item, error) {
+	if !data.Valid || len(strings.TrimSpace(data.String)) == 0 || strings.ToLower(strings.TrimSpace(data.String)) == "null" {
+		return nil, nil
 	}
-	trimmed := strings.TrimSpace(string(data))
-	return trimmed == "" || trimmed == "null" || trimmed == "NULL"
+	item := &entity.Item{}
+	if err := json.Unmarshal([]byte(data.String), item); err != nil {
+		zlog.Logger.Error().Err(err).Str("data", data.String).Msg("Failed to unmarshal item")
+		return nil, fmt.Errorf("failed to unmarshal item: %w", err)
+	}
+	return item, nil
 }

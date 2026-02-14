@@ -9,12 +9,14 @@ import (
 )
 
 type ItemUseCase struct {
-	itemRepo repository.ItemRepository
+	itemRepo       repository.ItemRepository
+	historyUseCase *HistoryUseCase
 }
 
-func NewItemUseCase(itemRepo repository.ItemRepository) *ItemUseCase {
+func NewItemUseCase(itemRepo repository.ItemRepository, historyUseCase *HistoryUseCase) *ItemUseCase {
 	return &ItemUseCase{
-		itemRepo: itemRepo,
+		itemRepo:       itemRepo,
+		historyUseCase: historyUseCase,
 	}
 }
 
@@ -27,6 +29,14 @@ func (uc *ItemUseCase) Create(ctx context.Context, item *entity.Item, username s
 		return fmt.Errorf("failed to create item: %w", err)
 	}
 
+	if uc.historyUseCase != nil {
+		_ = uc.historyUseCase.Add(ctx, &entity.ItemHistory{
+			ItemID:   item.ID,
+			Username: username,
+			Action:   entity.ActionInsert,
+		})
+	}
+
 	return nil
 }
 
@@ -35,7 +45,6 @@ func (uc *ItemUseCase) GetByID(ctx context.Context, id int) (*entity.Item, error
 	if err != nil {
 		return nil, err
 	}
-
 	return item, nil
 }
 
@@ -44,7 +53,6 @@ func (uc *ItemUseCase) GetAll(ctx context.Context) ([]*entity.Item, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get items: %w", err)
 	}
-
 	return items, nil
 }
 
@@ -57,12 +65,28 @@ func (uc *ItemUseCase) Update(ctx context.Context, item *entity.Item, username s
 		return err
 	}
 
+	if uc.historyUseCase != nil {
+		_ = uc.historyUseCase.Add(ctx, &entity.ItemHistory{
+			ItemID:   item.ID,
+			Username: username,
+			Action:   entity.ActionUpdate,
+		})
+	}
+
 	return nil
 }
 
 func (uc *ItemUseCase) Delete(ctx context.Context, id int, username string) error {
 	if err := uc.itemRepo.Delete(ctx, id, username); err != nil {
 		return err
+	}
+
+	if uc.historyUseCase != nil {
+		_ = uc.historyUseCase.Add(ctx, &entity.ItemHistory{
+			ItemID:   id,
+			Username: username,
+			Action:   entity.ActionDelete,
+		})
 	}
 
 	return nil

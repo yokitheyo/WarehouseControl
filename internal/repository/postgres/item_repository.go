@@ -3,9 +3,11 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/wb-go/wbf/dbpg"
+	"github.com/wb-go/wbf/zlog"
 	"github.com/yokitheyo/WarehouseControl/internal/domain/entity"
 )
 
@@ -49,9 +51,10 @@ func (r *itemRepository) GetByID(ctx context.Context, id int) (*entity.Item, err
 		&item.Quantity, &item.Price, &item.CreatedAt, &item.UpdatedAt,
 	)
 
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, entity.ErrItemNotFound
 	}
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to get item: %w", err)
 	}
@@ -71,7 +74,12 @@ func (r *itemRepository) GetAll(ctx context.Context) ([]*entity.Item, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get items: %w", err)
 	}
-	defer rows.Close()
+
+	defer func() {
+		if err := rows.Close(); err != nil {
+			zlog.Logger.Error().Err(err).Msg("Failed to close rows")
+		}
+	}()
 
 	var items []*entity.Item
 	for rows.Next() {
@@ -107,9 +115,10 @@ func (r *itemRepository) Update(ctx context.Context, item *entity.Item, username
 		item.Name, item.Description, item.Quantity, item.Price, username, item.ID,
 	).Scan(&item.UpdatedAt)
 
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return entity.ErrItemNotFound
 	}
+
 	if err != nil {
 		return fmt.Errorf("failed to update item: %w", err)
 	}

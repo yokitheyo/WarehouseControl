@@ -32,13 +32,13 @@ type createItemRequest struct {
 func (h *ItemHandler) Create(c *ginext.Context) {
 	var req createItemRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, 400, "invalid request body")
+		response.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	user, err := middleware.GetUserFromContext(c)
 	if err != nil {
-		response.Error(c, 401, entity.ErrUnauthorized.Error())
+		response.Error(c, http.StatusUnauthorized, entity.ErrUnauthorized.Error())
 		return
 	}
 
@@ -50,21 +50,21 @@ func (h *ItemHandler) Create(c *ginext.Context) {
 	}
 
 	if err := h.itemUseCase.Create(c.Request.Context(), item, user.Username); err != nil {
-		response.Error(c, 500, "failed to create item")
+		response.Error(c, http.StatusInternalServerError, "failed to create item")
 		return
 	}
 
-	response.Success(c, 201, item)
+	response.Success(c, http.StatusCreated, item)
 }
 
 func (h *ItemHandler) GetAll(c *ginext.Context) {
 	items, err := h.itemUseCase.GetAll(c.Request.Context())
 	if err != nil {
-		response.Error(c, 500, "failed to get items")
+		response.Error(c, http.StatusInternalServerError, "failed to get items")
 		return
 	}
 
-	response.Success(c, 200, items)
+	response.Success(c, http.StatusOK, items)
 }
 
 func (h *ItemHandler) GetByID(c *ginext.Context) {

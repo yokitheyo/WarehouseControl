@@ -4,12 +4,6 @@ import "time"
 
 type HistoryAction string
 
-const (
-	ActionInsert HistoryAction = "INSERT"
-	ActionUpdate HistoryAction = "UPDATE"
-	ActionDelete HistoryAction = "DELETE"
-)
-
 type ItemHistory struct {
 	ID        int           `json:"id"`
 	ItemID    int           `json:"item_id"`
