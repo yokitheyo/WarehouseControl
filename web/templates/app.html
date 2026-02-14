@@ -5,10 +5,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Warehouse Control</title>
+    <link rel="icon" type="image/svg+xml" href="https://tech.wildberries.ru/cabinet/favicon.svg">
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 
 <body>
+<!-- Контейнер для частиц -->
+<div id="particles-js" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;"></div>
+
     <!-- Главное приложение -->
     <div id="appSection" class="hidden">
         <div class="container">
@@ -104,6 +109,28 @@
             <div id="itemHistoryContent"></div>
         </div>
     </div>
+    <!-- Инициализация particles.js -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            particlesJS("particles-js", {
+                "particles": {
+                    "number": { "value": 60, "density": { "enable": true, "value_area": 800 } },
+                    "color": { "value": "#00ff88" },
+                    "shape": { "type": "circle" },
+                    "opacity": { "value": 0.3, "random": true },
+                    "size": { "value": 3, "random": true },
+                    "line_linked": { "enable": true, "distance": 150, "color": "#00ff88", "opacity": 0.2, "width": 1 },
+                    "move": { "enable": true, "speed": 2, "out_mode": "out" }
+                },
+                "interactivity": {
+                    "detect_on": "canvas",
+                    "events": { "onhover": { "enable": true, "mode": "grab" } },
+                    "modes": { "grab": { "distance": 140, "line_linked": { "opacity": 1 } } }
+                },
+                "retina_detect": true
+            });
+        });
+    </script>
     <script src="/static/js/application.js"></script>
 </body>
 
